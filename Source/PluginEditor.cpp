@@ -3,6 +3,7 @@
 
 #include "PluginEditor.h"
 #include "UserPresets.h"
+#include "AboutBox.h"
 
 P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p),
@@ -13,9 +14,19 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     // =========================================================================
     // 1. Header Bar Components
     // =========================================================================
-    titleLabel.setText(juce::String(juce::CharPointer_UTF8("\xe2\xac\xa1 PARALLAX64 SYNTH")), juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(juce::FontOptions(13.5f).withStyle("Bold")));
+    // Logo + name: clicking either opens the About window.
+    logoImage.setImage(juce::ImageCache::getFromMemory(BinaryData::appicon_png, BinaryData::appicon_pngSize),
+                       juce::RectanglePlacement::centred);
+    logoImage.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    logoImage.addMouseListener(this, false);
+    addAndMakeVisible(logoImage);
+
+    titleLabel.setName("title");
+    titleLabel.setText("PARALLAX64 SYNTH", juce::dontSendNotification);
+    titleLabel.setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 24.0f, juce::Font::bold)));
     titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e5ff));
+    titleLabel.setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    titleLabel.addMouseListener(this, false);
     addAndMakeVisible(titleLabel);
 
     // Banks A, B, C, D, E, F
@@ -62,9 +73,7 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
         addAndMakeVisible(btn);
     }
 
-    // Save Button (Warm Amber)
-    saveButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xfff59e0b));
-    saveButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff090c10));
+    // Save button: same look as the bank/slot buttons (dark grey, cyan when active)
     saveButton.onClick = [this]() { showSaveDialog(); };
     addAndMakeVisible(saveButton);
 
@@ -376,8 +385,11 @@ void P64AudioProcessorEditor::resized()
     // =========================================================================
     // Top Bar (Header)
     // =========================================================================
-    auto topBar = area.removeFromTop(36);
-    titleLabel.setBounds(topBar.removeFromLeft(185));
+    auto headerBar = area.removeFromTop(48);
+    auto titleArea = headerBar.removeFromLeft(320);
+    logoImage.setBounds(titleArea.removeFromLeft(50).reduced(2));
+    titleLabel.setBounds(titleArea);
+    auto topBar = headerBar.reduced(0, 6); // the controls keep their 36 px height
 
     // Preset Menu moved completely to the right
     // Rightmost: Preset Name Readout
@@ -459,9 +471,11 @@ void P64AudioProcessorEditor::resized()
     col1.removeFromTop(colSpacing);
 
     // PERF (Voice-mode buttons: Poly/Mono, Osc2 Sync, Unison)
-    auto perfArea = col1.removeFromTop(114);
+    auto perfArea = col1.removeFromTop(100);
     perfSection.setBounds(perfArea);
-    auto perfContent = perfArea.reduced(6, 24); // 24px matches every other section's header clearance
+    // 24 px header clearance like every other section, but only a small bottom margin:
+    // the three rows below need exactly 68 px.
+    auto perfContent = perfArea.reduced(6, 0).withTrimmedTop(24).withTrimmedBottom(8);
     voiceModeSelector->setBounds(perfContent.removeFromTop(20));
     perfContent.removeFromTop(4);
     osc2SyncToggle.setBounds(perfContent.removeFromTop(20));
@@ -681,6 +695,10 @@ void P64AudioProcessorEditor::mouseDown(const juce::MouseEvent& e)
     else if (e.eventComponent == &presetNameLabel)
     {
         showUserPresetMenu();
+    }
+    else if (e.eventComponent == &titleLabel || e.eventComponent == &logoImage)
+    {
+        AboutContent::show(this);
     }
 }
 

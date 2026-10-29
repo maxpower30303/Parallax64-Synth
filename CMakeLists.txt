@@ -44,6 +44,9 @@ juce_add_plugin(P64
     ICON_SMALL "Source/appicon.png"
 )
 
+# The logo is embedded so the header and the About window can draw it.
+juce_add_binary_data(P64_Assets SOURCES Source/appicon.png)
+
 target_sources(P64 PRIVATE
     Source/PluginProcessor.h
     Source/PluginProcessor.cpp
@@ -58,6 +61,7 @@ target_sources(P64 PRIVATE
     Source/MidiLearn.h
     Source/MonoStack.h
     Source/UserPresets.h
+    Source/AboutBox.h
     Source/Arpeggiator.h
     Source/P64LookAndFeel.h
     Source/P64LookAndFeel.cpp
@@ -77,6 +81,7 @@ target_compile_definitions(P64 PRIVATE
 )
 
 target_link_libraries(P64 PRIVATE
+    P64_Assets
     juce::juce_audio_utils
     juce::juce_dsp
     juce::juce_gui_extra

@@ -32,6 +32,7 @@ private:
 
     // Top Header UI
     juce::Label titleLabel;
+    juce::ImageComponent logoImage;
     juce::OwnedArray<juce::TextButton> bankButtons;
     juce::OwnedArray<juce::TextButton> slotButtons;
     juce::ComboBox presetBox;

@@ -160,14 +160,9 @@ void P64LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& butto
                                           bool shouldDrawButtonAsHighlighted,
                                           bool shouldDrawButtonAsDown)
 {
+    juce::ignoreUnused(backgroundColour);
     auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
-
-    // Toggle buttons use the shared dark/cyan scheme. Plain action buttons
-    // (e.g. SAVE) keep the colour they were given, otherwise their label
-    // colour - chosen for that background - ends up on a dark button.
-    const bool isActionButton = ! button.getClickingTogglesState();
-    auto baseCol = isActionButton ? backgroundColour
-                                  : (button.getToggleState() ? accentCyan.darker(0.4f) : backgroundDark);
+    auto baseCol = button.getToggleState() ? accentCyan.darker(0.4f) : backgroundDark;
 
     if (shouldDrawButtonAsHighlighted) baseCol = baseCol.brighter(0.15f);
     if (shouldDrawButtonAsDown) baseCol = baseCol.darker(0.1f);
@@ -175,8 +170,7 @@ void P64LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& butto
     g.setColour(baseCol);
     g.fillRoundedRectangle(bounds, 4.0f);
 
-    g.setColour(isActionButton ? backgroundColour.brighter(0.3f)
-                               : (button.getToggleState() ? accentCyan : knobBorder));
+    g.setColour(button.getToggleState() ? accentCyan : knobBorder);
     g.drawRoundedRectangle(bounds, 4.0f, 1.5f);
 }
 
@@ -198,7 +192,11 @@ void P64LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool
     g.fillPath(arrow);
 }
 
-juce::Font P64LookAndFeel::getLabelFont(juce::Label&)
+juce::Font P64LookAndFeel::getLabelFont(juce::Label& label)
 {
+    // The header title sets its own (larger) font.
+    if (label.getName() == "title")
+        return label.getFont();
+
     return juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::bold));
 }
