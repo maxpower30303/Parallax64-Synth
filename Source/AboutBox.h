@@ -12,7 +12,7 @@ class AboutContent : public juce::Component
 public:
     AboutContent()
     {
-        logo = juce::ImageCache::getFromMemory(BinaryData::appicon_png, BinaryData::appicon_pngSize);
+        logo = juce::ImageCache::getFromMemory(BinaryData::P64_synth_jpg, BinaryData::P64_synth_jpgSize);
 
         text.setMultiLine(true, true);
         text.setReadOnly(true);
@@ -59,9 +59,9 @@ public:
     void paint(juce::Graphics& g) override
     {
         g.fillAll(juce::Colour(0xff10141b));
-        g.drawImage(logo, juce::Rectangle<float>(20.0f, 18.0f, 76.0f, 76.0f));
+        g.drawImageWithin(logo, 16, 12, 96, 82, juce::RectanglePlacement::centred);
 
-        const int textX = 112;
+        const int textX = 124;
         g.setColour(juce::Colour(0xff00e5ff));
         g.setFont(juce::Font(juce::FontOptions(28.0f).withStyle("Bold")));
         g.drawText("Parallax64 Synth", textX, 14, getWidth() - textX - 16, 34, juce::Justification::centredLeft);

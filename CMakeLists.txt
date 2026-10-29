@@ -45,7 +45,7 @@ juce_add_plugin(P64
 )
 
 # The logo is embedded so the header and the About window can draw it.
-juce_add_binary_data(P64_Assets SOURCES Source/appicon.png)
+juce_add_binary_data(P64_Assets SOURCES Source/P64_synth.jpg)
 
 target_sources(P64 PRIVATE
     Source/PluginProcessor.h

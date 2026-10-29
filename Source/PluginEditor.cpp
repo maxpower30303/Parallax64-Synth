@@ -15,7 +15,7 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     // 1. Header Bar Components
     // =========================================================================
     // Logo + name: clicking either opens the About window.
-    logoImage.setImage(juce::ImageCache::getFromMemory(BinaryData::appicon_png, BinaryData::appicon_pngSize),
+    logoImage.setImage(juce::ImageCache::getFromMemory(BinaryData::P64_synth_jpg, BinaryData::P64_synth_jpgSize),
                        juce::RectanglePlacement::centred);
     logoImage.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     logoImage.addMouseListener(this, false);
@@ -386,8 +386,8 @@ void P64AudioProcessorEditor::resized()
     // Top Bar (Header)
     // =========================================================================
     auto headerBar = area.removeFromTop(48);
-    auto titleArea = headerBar.removeFromLeft(320);
-    logoImage.setBounds(titleArea.removeFromLeft(50).reduced(2));
+    auto titleArea = headerBar.removeFromLeft(340);
+    logoImage.setBounds(titleArea.removeFromLeft(64).reduced(2));
     titleLabel.setBounds(titleArea);
     auto topBar = headerBar.reduced(0, 6); // the controls keep their 36 px height
 
