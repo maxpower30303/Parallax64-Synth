@@ -23,7 +23,9 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
 
     titleLabel.setName("title");
     titleLabel.setText("PARALLAX64 SYNTH", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 24.0f, juce::Font::bold)));
+    titleLabel.setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 18.0f,
+                                                    juce::Font::bold | juce::Font::italic)));
+    titleLabel.setBorderSize(juce::BorderSize<int>(0));
     titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e5ff));
     titleLabel.setMouseCursor(juce::MouseCursor::PointingHandCursor);
     titleLabel.addMouseListener(this, false);
@@ -386,8 +388,9 @@ void P64AudioProcessorEditor::resized()
     // Top Bar (Header)
     // =========================================================================
     auto headerBar = area.removeFromTop(48);
-    auto titleArea = headerBar.removeFromLeft(340);
-    logoImage.setBounds(titleArea.removeFromLeft(64).reduced(2));
+    auto titleArea = headerBar.removeFromLeft(300);
+    logoImage.setBounds(titleArea.removeFromLeft(54).reduced(2));
+    titleArea.removeFromLeft(4);
     titleLabel.setBounds(titleArea);
     auto topBar = headerBar.reduced(0, 6); // the controls keep their 36 px height
 
