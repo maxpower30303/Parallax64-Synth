@@ -1,0 +1,18 @@
+# Build output
+build/
+out/
+.vs/
+*.user
+*.obj
+*.pdb
+*.ilk
+*.exe
+
+# Local/internal notes (contain absolute paths and work-in-progress info)
+HANDOVER.md
+
+# Stale placeholder folder; no font files are bundled with the project
+Resources/
+
+# Local release packaging
+release/
