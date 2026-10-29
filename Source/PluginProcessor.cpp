@@ -152,6 +152,12 @@ void P64AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
     reverb.setParameters(revSize, revDamp, revMix);
     reverb.process(buffer);
 
+    // Per-preset loudness trim, after the effects so it does not change how hard they are driven
+    // (ramped so switching presets does not click)
+    const float presetGain = juce::Decibels::decibelsToGain(apvts.getRawParameterValue(IDs::presetLevel)->load());
+    buffer.applyGainRamp(0, buffer.getNumSamples(), lastPresetGain, presetGain);
+    lastPresetGain = presetGain;
+
     // Master Volume
     float masterVol = apvts.getRawParameterValue(IDs::masterVolume)->load();
     buffer.applyGain(masterVol);

@@ -58,6 +58,7 @@ private:
     MonoStack monoStack;
     bool lastArpOn = false;
     bool lastMonoOn = false;
+    float lastPresetGain = 1.0f;
     static constexpr int NUM_VOICES = 8;
 
     // Effects

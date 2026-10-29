@@ -88,6 +88,7 @@ namespace IDs
     // Voice Mode
     inline const juce::String voiceMode     = "voice_mode"; // 0 = Poly, 1 = Mono
     inline const juce::String unisonEnabled = "unison_enabled";
+    inline const juce::String presetLevel   = "preset_level"; // dB, set by each preset to even out loudness; not in the UI
 }
 
 class Parameters
@@ -196,6 +197,9 @@ public:
         juce::StringArray voiceModes { "Poly", "Mono" };
         params.push_back(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{IDs::voiceMode, 1}, "Voice Mode", voiceModes, 0));
         params.push_back(std::make_unique<juce::AudioParameterBool>(juce::ParameterID{IDs::unisonEnabled, 1}, "Unison", false));
+        params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{IDs::presetLevel, 1}, "Preset Level",
+                                                                     juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f), 0.0f,
+                                                                     juce::AudioParameterFloatAttributes().withAutomatable(false)));
 
         return { params.begin(), params.end() };
     }
