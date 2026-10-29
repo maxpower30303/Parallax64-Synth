@@ -4,7 +4,7 @@ by Flix
 
 A polyphonic subtractive synthesizer for Windows, built with [JUCE](https://juce.com). Runs as a **VST3 plug-in** and as a **standalone application** (WASAPI/ASIO).
 
-<img src="docs/Parallax64-Synth.png" alt="Parallax64 Synth user interface" width="800">
+<img src="docs/Parallax64-Synth.jpg" alt="Parallax64 Synth user interface" width="800">
 
 ## Features
 
