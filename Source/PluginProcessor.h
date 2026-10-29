@@ -56,6 +56,8 @@ private:
     juce::Synthesiser synth;
     Arpeggiator arpeggiator;
     MonoStack monoStack;
+    bool lastArpOn = false;
+    bool lastMonoOn = false;
     static constexpr int NUM_VOICES = 8;
 
     // Effects

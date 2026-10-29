@@ -97,6 +97,20 @@ void P64AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
     // line before the arp/synth see them. Skipped while the arp is running,
     // since it already produces its own monophonic note stream.
     bool monoOn = static_cast<int>(*apvts.getRawParameterValue(IDs::voiceMode)) == 1;
+
+    // Both stages rewrite the note stream. A note that started under the old
+    // routing would never receive its note-off once the routing has changed (for
+    // example when a preset switches the arp on while a key is held), so release
+    // everything whenever the routing changes.
+    if (arpOn != lastArpOn || monoOn != lastMonoOn)
+    {
+        synth.allNotesOff(0, true);
+        arpeggiator.reset();
+        monoStack.reset();
+        lastArpOn = arpOn;
+        lastMonoOn = monoOn;
+    }
+
     if (monoOn && !arpOn)
         monoStack.process(midiMessages);
     else
