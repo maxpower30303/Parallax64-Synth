@@ -23,8 +23,7 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
 
     titleLabel.setName("title");
     titleLabel.setText("PARALLAX64 SYNTH", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 18.0f,
-                                                    juce::Font::bold | juce::Font::italic)));
+    titleLabel.setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 18.0f, juce::Font::bold)));
     titleLabel.setBorderSize(juce::BorderSize<int>(0));
     titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00e5ff));
     titleLabel.setMouseCursor(juce::MouseCursor::PointingHandCursor);
