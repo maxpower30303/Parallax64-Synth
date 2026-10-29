@@ -12,6 +12,7 @@ A polyphonic subtractive synthesizer for Windows, built with [JUCE](https://juce
 - Two ADSR envelopes, LFO (cutoff / pitch / amp / pulse width), arpeggiator
 - Effects: distortion, chorus, delay, reverb
 - 48 factory presets (banks A-F, slots 1-8)
+- User presets: SAVE stores the current sound under a suggested name (UserPreset1, UserPreset2, ...) and asks before overwriting; click the preset name at the top right to load them
 - MIDI learn for knobs, faders and selectors; learned mappings are saved with the session/preset state
 
 ## Build (Windows)

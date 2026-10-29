@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Flix
 
 #include "PluginEditor.h"
+#include "UserPresets.h"
 
 P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p),
@@ -64,6 +65,7 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     // Save Button (Warm Amber)
     saveButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xfff59e0b));
     saveButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff090c10));
+    saveButton.onClick = [this]() { showSaveDialog(); };
     addAndMakeVisible(saveButton);
 
     // Preset Name Display
@@ -659,6 +661,8 @@ void P64AudioProcessorEditor::selectPreset(int bank, int slot)
     for (int s = 0; s < slotButtons.size(); ++s)
         slotButtons[s]->setToggleState(s == currentSlot, juce::dontSendNotification);
 
+    currentUserPreset = juce::String();
+
     int presetIdx = currentBank * 8 + currentSlot;
     if (presetIdx >= 0 && presetIdx < audioProcessor.getNumPrograms())
     {
@@ -674,6 +678,135 @@ void P64AudioProcessorEditor::mouseDown(const juce::MouseEvent& e)
     {
         showPresetMidiLearnMenu();
     }
+    else if (e.eventComponent == &presetNameLabel)
+    {
+        showUserPresetMenu();
+    }
+}
+
+void P64AudioProcessorEditor::showUserPresetMenu()
+{
+    auto names = UserPresets::listNames();
+
+    juce::PopupMenu menu;
+    menu.addSectionHeader("USER PRESETS");
+
+    if (names.isEmpty())
+        menu.addItem(1, "(none yet - press SAVE)", false, false);
+
+    for (int i = 0; i < names.size(); ++i)
+        menu.addItem(100 + i, names[i], true, names[i] == currentUserPreset);
+
+    menu.addSeparator();
+    menu.addItem(2, "Open preset folder");
+
+    juce::Component::SafePointer<P64AudioProcessorEditor> safeThis(this);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&presetNameLabel),
+                       [safeThis, names](int result)
+    {
+        if (safeThis == nullptr || result == 0)
+            return;
+
+        if (result == 2)
+        {
+            auto folder = UserPresets::getFolder();
+            folder.createDirectory();
+            folder.startAsProcess();
+            return;
+        }
+
+        const int index = result - 100;
+        if (index < 0 || index >= names.size())
+            return;
+
+        auto& self = *safeThis;
+        if (UserPresets::load(names[index], self.audioProcessor.getAPVTS()))
+        {
+            self.currentUserPreset = names[index];
+            for (auto* b : self.bankButtons) b->setToggleState(false, juce::dontSendNotification);
+            for (auto* b : self.slotButtons) b->setToggleState(false, juce::dontSendNotification);
+            self.presetNameLabel.setText(names[index], juce::dontSendNotification);
+        }
+        else
+        {
+            juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Load failed",
+                                                   "Could not load the preset \"" + names[index] + "\".", "OK", &self);
+        }
+    });
+}
+
+void P64AudioProcessorEditor::showSaveDialog()
+{
+    auto* window = new juce::AlertWindow("Save user preset", "Name of the preset:",
+                                         juce::MessageBoxIconType::NoIcon, this);
+    window->addTextEditor("name", UserPresets::suggestName());
+    window->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    window->setColour(juce::AlertWindow::backgroundColourId, juce::Colour(0xff10141b));
+    window->setColour(juce::AlertWindow::textColourId, juce::Colour(0xffe2e8f0));
+    window->setColour(juce::AlertWindow::outlineColourId, juce::Colour(0xff00e5ff));
+    if (auto* editor = window->getTextEditor("name"))
+    {
+        editor->setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff080f1a));
+        editor->setColour(juce::TextEditor::textColourId, juce::Colour(0xff38bdf8));
+        editor->setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff16253c));
+        editor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(0xff00e5ff));
+        editor->setInputRestrictions(48);
+        editor->selectAll();
+    }
+
+    juce::Component::SafePointer<P64AudioProcessorEditor> safeThis(this);
+    juce::Component::SafePointer<juce::AlertWindow> safeWindow(window);
+
+    window->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, safeWindow](int result)
+    {
+        if (result != 1 || safeThis == nullptr || safeWindow == nullptr)
+            return;
+
+        auto name = UserPresets::sanitizeName(safeWindow->getTextEditorContents("name"));
+        if (name.isEmpty())
+            return;
+
+        auto doSave = [safeThis, name]()
+        {
+            if (safeThis == nullptr)
+                return;
+
+            auto& self = *safeThis;
+            if (UserPresets::save(name, self.audioProcessor.getAPVTS()))
+            {
+                self.currentUserPreset = name;
+                for (auto* b : self.bankButtons) b->setToggleState(false, juce::dontSendNotification);
+                for (auto* b : self.slotButtons) b->setToggleState(false, juce::dontSendNotification);
+                self.presetNameLabel.setText(name, juce::dontSendNotification);
+            }
+            else
+            {
+                juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Save failed",
+                                                       "Could not write the preset to:\n"
+                                                           + UserPresets::getFolder().getFullPathName(),
+                                                       "OK", &self);
+            }
+        };
+
+        if (! UserPresets::exists(name))
+        {
+            doSave();
+            return;
+        }
+
+        // A preset with this name exists: only overwrite after an explicit confirmation.
+        auto* confirm = new juce::AlertWindow("Overwrite preset?",
+                                              "A preset named \"" + name + "\" already exists.\nOverwrite it?",
+                                              juce::MessageBoxIconType::QuestionIcon, safeThis.getComponent());
+        confirm->addButton("Overwrite", 1, juce::KeyPress(juce::KeyPress::returnKey));
+        confirm->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+        confirm->setColour(juce::AlertWindow::backgroundColourId, juce::Colour(0xff10141b));
+        confirm->setColour(juce::AlertWindow::textColourId, juce::Colour(0xffe2e8f0));
+        confirm->setColour(juce::AlertWindow::outlineColourId, juce::Colour(0xfff59e0b));
+        confirm->enterModalState(true, juce::ModalCallbackFunction::create([doSave](int r) { if (r == 1) doSave(); }), true);
+    }), true);
 }
 
 void P64AudioProcessorEditor::showPresetMidiLearnMenu()

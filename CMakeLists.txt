@@ -57,6 +57,7 @@ target_sources(P64 PRIVATE
     Source/Presets.h
     Source/MidiLearn.h
     Source/MonoStack.h
+    Source/UserPresets.h
     Source/Arpeggiator.h
     Source/P64LookAndFeel.h
     Source/P64LookAndFeel.cpp

@@ -23,6 +23,8 @@ public:
 
     void selectPreset(int bank, int slot);
     void showPresetMidiLearnMenu();
+    void showSaveDialog();
+    void showUserPresetMenu();
 
 private:
     P64AudioProcessor& audioProcessor;
@@ -38,6 +40,7 @@ private:
     VoiceLedsComponent voiceLeds;
     int currentBank = 0; // 0=A (Bass), 1=B (Lead), 2=C (Pad), 3=D (Mallet), 4=E (Arp), 5=F (FX)
     int currentSlot = 0; // 0..7 (1..8)
+    juce::String currentUserPreset; // name of the loaded user preset, empty while a factory preset is active
 
     // 5 Columns Section Panels
     SectionPanel lfoSection { "LFO", "MOD" };
