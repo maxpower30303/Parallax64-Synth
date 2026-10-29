@@ -1428,7 +1428,7 @@ namespace Presets
                     { IDs::reverbDamp, 0.5f },
                     { IDs::reverbMix, 0.12f },
                     { IDs::reverbEnabled, 1.0f },
-                    { IDs::presetLevel, 2.0f }
+                    { IDs::presetLevel, 4.8f }
                 }
             },
             {
@@ -1478,7 +1478,7 @@ namespace Presets
                     { IDs::reverbMix, 0.12f },
                     { IDs::reverbEnabled, 1.0f },
                     { IDs::unisonEnabled, 1.0f },
-                    { IDs::presetLevel, 1.5f }
+                    { IDs::presetLevel, 6.2f }
                 }
             },
             {
@@ -1530,7 +1530,7 @@ namespace Presets
                     { IDs::reverbDamp, 0.45f },
                     { IDs::reverbMix, 0.15f },
                     { IDs::reverbEnabled, 1.0f },
-                    { IDs::presetLevel, 5.5f }
+                    { IDs::presetLevel, 8.0f }
                 }
             },
             {
@@ -1576,7 +1576,7 @@ namespace Presets
                     { IDs::delayFeedback, 0.3f },
                     { IDs::delayMix, 0.15f },
                     { IDs::delayEnabled, 1.0f },
-                    { IDs::presetLevel, -8.0f }
+                    { IDs::presetLevel, -1.8f }
                 }
             },
             {
@@ -1623,7 +1623,7 @@ namespace Presets
                     { IDs::delayFeedback, 0.4f },
                     { IDs::delayMix, 0.2f },
                     { IDs::delayEnabled, 1.0f },
-                    { IDs::presetLevel, -8.0f }
+                    { IDs::presetLevel, -2.1f }
                 }
             },
             {
@@ -1670,7 +1670,7 @@ namespace Presets
                     { IDs::reverbDamp, 0.6f },
                     { IDs::reverbMix, 0.15f },
                     { IDs::reverbEnabled, 1.0f },
-                    { IDs::presetLevel, -4.0f }
+                    { IDs::presetLevel, 1.0f }
                 }
             },
             {
@@ -1710,7 +1710,7 @@ namespace Presets
                     { IDs::arpRate, 6.0f },
                     { IDs::arpGate, 0.4f },
                     { IDs::arpOctave, 3.0f },
-                    { IDs::presetLevel, -9.5f }
+                    { IDs::presetLevel, -4.9f }
                 }
             },
             {
@@ -1759,7 +1759,7 @@ namespace Presets
                     { IDs::reverbDamp, 0.5f },
                     { IDs::reverbMix, 0.12f },
                     { IDs::reverbEnabled, 1.0f },
-                    { IDs::presetLevel, 1.0f }
+                    { IDs::presetLevel, 4.7f }
                 }
             },
             {

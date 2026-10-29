@@ -41,6 +41,7 @@ namespace DSP
         {
             currentSampleRate = static_cast<float>(sampleRate);
             phase = 0.0f;
+            triState = 0.0f;
         }
 
         void setFrequency(float freq)
@@ -52,12 +53,23 @@ namespace DSP
         void setWaveform(Waveform newWave) { wave = newWave; }
         void setPulseWidth(float pw) { pulseWidth = juce::jlimit(0.05f, 0.95f, pw); }
 
-        void resetPhase() { phase = 0.0f; }
+        void resetPhase() { phase = 0.0f; triState = 0.0f; }
+
+        // Hard sync: true if the last processSample() call wrapped the phase, i.e. a new
+        // period of this oscillator started somewhere inside that sample.
+        bool didWrap() const { return wrapped; }
+
+        // How far into the new period this oscillator already is, in samples (0..1).
+        // Valid right after processSample() when didWrap() is true.
+        float samplesSinceWrap() const { return phase / phaseIncrement; }
+
+        // Restarts the period `samplesAgo` samples in the past (sub-sample accurate sync).
+        void syncRestart(float samplesAgo) { phase = samplesAgo * phaseIncrement; }
 
         float processSample()
         {
             float out = 0.0f;
-            float dt = phaseIncrement;
+            const float dt = phaseIncrement;
 
             switch (wave)
             {
@@ -71,7 +83,9 @@ namespace DSP
                 {
                     out = (phase < pulseWidth) ? 1.0f : -1.0f;
                     out += polyBLEP(phase, dt);
-                    out -= polyBLEP(std::fmod(phase + (1.0f - pulseWidth), 1.0f), dt);
+                    float p2 = phase + (1.0f - pulseWidth);
+                    if (p2 >= 1.0f) p2 -= 1.0f;
+                    out -= polyBLEP(p2, dt);
                     break;
                 }
                 case Waveform::Triangle:
@@ -79,7 +93,9 @@ namespace DSP
                     // Integrated square wave approximation with Blep
                     float sq = (phase < 0.5f) ? 1.0f : -1.0f;
                     sq += polyBLEP(phase, dt);
-                    sq -= polyBLEP(std::fmod(phase + 0.5f, 1.0f), dt);
+                    float p2 = phase + 0.5f;
+                    if (p2 >= 1.0f) p2 -= 1.0f;
+                    sq -= polyBLEP(p2, dt);
                     // Leaky integrator for triangle
                     triState = triState * 0.999f + sq * (4.0f * dt);
                     out = juce::jlimit(-1.0f, 1.0f, triState);
@@ -94,7 +110,8 @@ namespace DSP
             }
 
             phase += phaseIncrement;
-            if (phase >= 1.0f)
+            wrapped = phase >= 1.0f;
+            if (wrapped)
                 phase -= 1.0f;
 
             return out;
@@ -107,6 +124,7 @@ namespace DSP
         float phaseIncrement = 0.01f;
         float pulseWidth = 0.5f;
         float triState = 0.0f;
+        bool wrapped = false;
         Waveform wave = Waveform::Saw;
     };
 
@@ -126,6 +144,7 @@ namespace DSP
         void reset()
         {
             s1 = s2 = s3 = s4 = 0.0f;
+            t1 = t2 = t3 = t4 = 0.0f;
         }
 
         void setCutoffFrequency(float hz)
@@ -147,17 +166,23 @@ namespace DSP
             feedback = juce::jmap(juce::jlimit(0.1f, 10.0f, q), 0.1f, 10.0f, 0.0f, maxFeedback);
         }
 
-        void setAggressive(bool shouldBeAggressive) { aggressive = shouldBeAggressive; }
+        void setAggressive(bool shouldBeAggressive)
+        {
+            aggressive = shouldBeAggressive;
+            driveAmt = aggressive ? 1.8f : 1.0f;
+        }
 
+        // tanh of each stage state is kept between samples (t1..t4) instead of being
+        // computed twice, which saves 3 of 8 tanh calls per sample and gives the
+        // same result bit for bit.
         float processSample(float input)
         {
-            float driveAmt = aggressive ? 1.8f : 1.0f;
-            float fbSample = (input * driveAmt) - feedback * s4;
+            const float u = std::tanh((input * driveAmt) - feedback * s4);
 
-            s1 += g * (std::tanh(fbSample) - std::tanh(s1));
-            s2 += g * (std::tanh(s1) - std::tanh(s2));
-            s3 += g * (std::tanh(s2) - std::tanh(s3));
-            s4 += g * (std::tanh(s3) - std::tanh(s4));
+            s1 += g * (u - t1);   t1 = std::tanh(s1);
+            s2 += g * (t1 - t2);  t2 = std::tanh(s2);
+            s3 += g * (t2 - t3);  t3 = std::tanh(s3);
+            s4 += g * (t3 - t4);  t4 = std::tanh(s4);
 
             if (aggressive)
                 return std::tanh(s4 * 1.3f) * 0.85f;
@@ -170,8 +195,10 @@ namespace DSP
         float cutoffHz = 1000.0f;
         float g = 0.1f;
         float feedback = 0.0f;
+        float driveAmt = 1.0f;
         bool aggressive = false;
         float s1 = 0.0f, s2 = 0.0f, s3 = 0.0f, s4 = 0.0f;
+        float t1 = 0.0f, t2 = 0.0f, t3 = 0.0f, t4 = 0.0f;
     };
 
     class NoiseGenerator
@@ -185,6 +212,8 @@ namespace DSP
         juce::Random random;
     };
 
+    // Low-frequency oscillator that is read once per control block and then advanced
+    // by that many samples, so the (expensive) waveform is not evaluated for every sample.
     class LowFrequencyOscillator
     {
     public:
@@ -202,21 +231,22 @@ namespace DSP
 
         void setWaveform(Waveform w) { wave = w; }
 
-        float processSample()
+        float value() const
         {
-            float out = 0.0f;
             switch (wave)
             {
-                case Waveform::Saw:      out = 1.0f - (2.0f * phase); break;
-                case Waveform::Square:   out = (phase < 0.5f) ? 1.0f : -1.0f; break;
-                case Waveform::Triangle: out = 2.0f * std::fabs(2.0f * (phase - std::floor(phase + 0.5f))) - 1.0f; break;
+                case Waveform::Saw:      return 1.0f - (2.0f * phase);
+                case Waveform::Square:   return (phase < 0.5f) ? 1.0f : -1.0f;
+                case Waveform::Triangle: return 2.0f * std::fabs(2.0f * (phase - std::floor(phase + 0.5f))) - 1.0f;
                 case Waveform::Sine:
-                default:                 out = std::sin(phase * TWO_PI); break;
+                default:                 return std::sin(phase * TWO_PI);
             }
+        }
 
-            phase += phaseInc;
-            if (phase >= 1.0f) phase -= 1.0f;
-            return out;
+        void advance(int numSamples)
+        {
+            phase += phaseInc * static_cast<float>(numSamples);
+            phase -= std::floor(phase);
         }
 
     private:

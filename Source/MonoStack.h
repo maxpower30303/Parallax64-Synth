@@ -17,12 +17,13 @@ public:
     void reset()
     {
         heldNotes.clear();
+        heldNotes.reserve(128);
         currentNote = -1;
     }
 
     void process(juce::MidiBuffer& midiMessages)
     {
-        juce::MidiBuffer output;
+        output.clear();
 
         for (const auto metadata : midiMessages)
         {
@@ -86,5 +87,6 @@ public:
 private:
     struct HeldNote { int note; juce::uint8 velocity; };
     std::vector<HeldNote> heldNotes;
+    juce::MidiBuffer output;     // scratch, reused every block
     int currentNote = -1;
 };

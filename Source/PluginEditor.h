@@ -38,9 +38,10 @@ private:
     juce::ComboBox presetBox;
     juce::Label presetNameLabel;
     juce::TextButton saveButton { "SAVE" };
-    VoiceLedsComponent voiceLeds;
     int currentBank = 0; // 0=A (Bass), 1=B (Lead), 2=C (Pad), 3=D (Mallet), 4=E (Arp), 5=F (FX)
     int currentSlot = 0; // 0..7 (1..8)
+    // Windows opened from the editor that outlive a click; closed with the editor
+    juce::Component::SafePointer<juce::Component> aboutWindow, saveWindow, confirmWindow;
     juce::String currentUserPreset; // name of the loaded user preset, empty while a factory preset is active
 
     // 5 Columns Section Panels

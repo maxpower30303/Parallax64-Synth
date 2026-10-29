@@ -43,7 +43,7 @@ public:
         setSize(580, 540);
     }
 
-    static void show(juce::Component* centreAround)
+    static juce::DialogWindow* show(juce::Component* centreAround)
     {
         juce::DialogWindow::LaunchOptions options;
         options.content.setOwned(new AboutContent());
@@ -53,7 +53,7 @@ public:
         options.escapeKeyTriggersCloseButton = true;
         options.useNativeTitleBar = true;
         options.resizable = false;
-        options.launchAsync();
+        return options.launchAsync();
     }
 
     void paint(juce::Graphics& g) override

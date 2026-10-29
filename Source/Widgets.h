@@ -42,21 +42,6 @@ private:
 };
 
 // ==============================================================================
-// 3. 16 Polyphonic Voice Activity LEDs
-// ==============================================================================
-class VoiceLedsComponent : public juce::Component
-{
-public:
-    VoiceLedsComponent();
-    void setNumActive(int count);
-    void paint(juce::Graphics& g) override;
-
-private:
-    int activeVoices = 1;
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VoiceLedsComponent)
-};
-
-// ==============================================================================
 // 4. Section Card / Panel with Cyber Framing
 // ==============================================================================
 class SectionPanel : public juce::Component

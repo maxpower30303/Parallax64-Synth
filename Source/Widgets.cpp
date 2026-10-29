@@ -78,10 +78,15 @@ EnvelopeVisualizerComponent::EnvelopeVisualizerComponent(const juce::Colour& lin
 
 void EnvelopeVisualizerComponent::setParameters(float attack, float decay, float sustain, float release)
 {
-    a = juce::jlimit(0.001f, 4.0f, attack);
-    d = juce::jlimit(0.001f, 4.0f, decay);
-    s = juce::jlimit(0.0f, 1.0f, sustain);
-    r = juce::jlimit(0.001f, 6.0f, release);
+    const float na = juce::jlimit(0.001f, 4.0f, attack);
+    const float nd = juce::jlimit(0.001f, 4.0f, decay);
+    const float ns = juce::jlimit(0.0f, 1.0f, sustain);
+    const float nr = juce::jlimit(0.001f, 6.0f, release);
+
+    if (na == a && nd == d && ns == s && nr == r)
+        return;                       // called 30x a second; only redraw when something moved
+
+    a = na; d = nd; s = ns; r = nr;
     repaint();
 }
 
@@ -135,46 +140,6 @@ void EnvelopeVisualizerComponent::paint(juce::Graphics& g)
     g.strokePath(curve, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     g.setColour(traceColour);
     g.strokePath(curve, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-}
-
-// ==============================================================================
-// 3. VoiceLedsComponent
-// ==============================================================================
-VoiceLedsComponent::VoiceLedsComponent()
-{
-}
-
-void VoiceLedsComponent::setNumActive(int count)
-{
-    activeVoices = juce::jlimit(0, 16, count);
-    repaint();
-}
-
-void VoiceLedsComponent::paint(juce::Graphics& g)
-{
-    auto b = getLocalBounds().toFloat();
-    float ledRadius = 3.0f;
-    float step = b.getWidth() / 16.0f;
-
-    for (int i = 0; i < 16; ++i)
-    {
-        float cx = b.getX() + (i + 0.5f) * step;
-        float cy = b.getCentreY();
-        bool active = (i < activeVoices);
-
-        if (active)
-        {
-            g.setColour(juce::Colour(0x6600e5ff));
-            g.fillEllipse(cx - ledRadius - 1.5f, cy - ledRadius - 1.5f, (ledRadius + 1.5f) * 2.0f, (ledRadius + 1.5f) * 2.0f);
-            g.setColour(juce::Colour(0xff00e5ff));
-            g.fillEllipse(cx - ledRadius, cy - ledRadius, ledRadius * 2.0f, ledRadius * 2.0f);
-        }
-        else
-        {
-            g.setColour(juce::Colour(0xff1b222d));
-            g.fillEllipse(cx - ledRadius, cy - ledRadius, ledRadius * 2.0f, ledRadius * 2.0f);
-        }
-    }
 }
 
 // ==============================================================================

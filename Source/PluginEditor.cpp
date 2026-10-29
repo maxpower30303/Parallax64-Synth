@@ -30,6 +30,17 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     titleLabel.addMouseListener(this, false);
     addAndMakeVisible(titleLabel);
 
+    // Restore which sound is loaded (editor reopened, or session reloaded)
+    if (audioProcessor.isUserPreset())
+    {
+        currentUserPreset = audioProcessor.getPresetLabel();
+    }
+    else
+    {
+        currentBank = audioProcessor.getCurrentProgram() / 8;
+        currentSlot = audioProcessor.getCurrentProgram() % 8;
+    }
+
     // Banks A, B, C, D, E, F
     // A: Bass, B: Lead, C: Pad, D: Mallet, E: Arp, F: FX
     const juce::StringArray bankNames = { "A", "B", "C", "D", "E", "F" };
@@ -47,7 +58,8 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
         btn->setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff00e5ff));
         btn->setColour(juce::TextButton::textColourOnId, juce::Colour(0xff090c10));
         btn->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff121824));
-        if (b == 0) btn->setToggleState(true, juce::dontSendNotification);
+        if (b == audioProcessor.getCurrentProgram() / 8 && ! audioProcessor.isUserPreset())
+            btn->setToggleState(true, juce::dontSendNotification);
 
         btn->onClick = [this, b]() {
             selectPreset(b, currentSlot);
@@ -65,7 +77,8 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
         btn->setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff00e5ff));
         btn->setColour(juce::TextButton::textColourOnId, juce::Colour(0xff090c10));
         btn->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff121824));
-        if (i == 0) btn->setToggleState(true, juce::dontSendNotification);
+        if (i == audioProcessor.getCurrentProgram() % 8 && ! audioProcessor.isUserPreset())
+            btn->setToggleState(true, juce::dontSendNotification);
 
         btn->onClick = [this, i]() {
             selectPreset(currentBank, i);
@@ -79,7 +92,7 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     addAndMakeVisible(saveButton);
 
     // Preset Name Display
-    presetNameLabel.setText(audioProcessor.getProgramName(0), juce::dontSendNotification);
+    presetNameLabel.setText(audioProcessor.getPresetLabel(), juce::dontSendNotification);
     presetNameLabel.setFont(juce::Font(juce::FontOptions(11.0f).withStyle("Bold")));
     presetNameLabel.setJustificationType(juce::Justification::centred);
     presetNameLabel.setColour(juce::Label::textColourId, juce::Colour(0xff38bdf8));
@@ -93,7 +106,7 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
     {
         presetBox.addItem(audioProcessor.getProgramName(i), i + 1);
     }
-    presetBox.setSelectedId(1, juce::dontSendNotification);
+    presetBox.setSelectedId(audioProcessor.getCurrentProgram() + 1, juce::dontSendNotification);
     presetBox.onChange = [this]() {
         int sel = presetBox.getSelectedId() - 1;
         if (sel >= 0 && sel < audioProcessor.getNumPrograms())
@@ -126,9 +139,6 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
             selectPreset(nextBank, currentSlot);
         });
     };
-
-    // Voice LEDs removed from top-right per UI redesign
-    voiceLeds.setVisible(false);
 
     // =========================================================================
     // 2. Section Panels
@@ -230,6 +240,19 @@ P64AudioProcessorEditor::P64AudioProcessorEditor(P64AudioProcessor& p)
 P64AudioProcessorEditor::~P64AudioProcessorEditor()
 {
     stopTimer();
+
+    // Anything the editor opened must not outlive it (a popup menu or dialog would call back
+    // into a deleted editor, and in a host the window would be left floating)
+    juce::PopupMenu::dismissAllActiveMenus();
+    for (auto* w : { aboutWindow.getComponent(), saveWindow.getComponent(), confirmWindow.getComponent() })
+        if (w != nullptr)
+            w->exitModalState(0);
+    if (auto* about = dynamic_cast<juce::DialogWindow*>(aboutWindow.getComponent()))
+        about->setVisible(false);
+
+    audioProcessor.getMidiLearn().onPresetNext = nullptr;
+    audioProcessor.getMidiLearn().onBankNext = nullptr;
+
     chorusAttachment.reset();
     delayAttachment.reset();
     reverbAttachment.reset();
@@ -323,11 +346,6 @@ void P64AudioProcessorEditor::timerCallback()
         *apvts.getRawParameterValue(IDs::ampSustain),
         *apvts.getRawParameterValue(IDs::ampRelease)
     );
-
-    // Update voice activity indicators
-    float rms = (audioProcessor.getRMSLevel(0) + audioProcessor.getRMSLevel(1)) * 0.5f;
-    int numActive = juce::jlimit(1, 16, static_cast<int>(rms * 28.0f) + 1);
-    voiceLeds.setNumActive(numActive);
 
     // ModeSelectorBar has no attachment mechanism of its own (unlike the
     // Slider/ButtonAttachments the knobs and FX toggles use), so it never
@@ -700,7 +718,10 @@ void P64AudioProcessorEditor::mouseDown(const juce::MouseEvent& e)
     }
     else if (e.eventComponent == &titleLabel || e.eventComponent == &logoImage)
     {
-        AboutContent::show(this);
+        if (aboutWindow == nullptr)
+            aboutWindow = AboutContent::show(this);
+        else
+            aboutWindow->toFront(true);
     }
 }
 
@@ -743,6 +764,7 @@ void P64AudioProcessorEditor::showUserPresetMenu()
         if (UserPresets::load(names[index], self.audioProcessor.getAPVTS()))
         {
             self.currentUserPreset = names[index];
+            self.audioProcessor.setUserPresetLabel(names[index]);
             for (auto* b : self.bankButtons) b->setToggleState(false, juce::dontSendNotification);
             for (auto* b : self.slotButtons) b->setToggleState(false, juce::dontSendNotification);
             self.presetNameLabel.setText(names[index], juce::dontSendNotification);
@@ -778,6 +800,7 @@ void P64AudioProcessorEditor::showSaveDialog()
 
     juce::Component::SafePointer<P64AudioProcessorEditor> safeThis(this);
     juce::Component::SafePointer<juce::AlertWindow> safeWindow(window);
+    saveWindow = window;
 
     window->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, safeWindow](int result)
     {
@@ -797,6 +820,7 @@ void P64AudioProcessorEditor::showSaveDialog()
             if (UserPresets::save(name, self.audioProcessor.getAPVTS()))
             {
                 self.currentUserPreset = name;
+                self.audioProcessor.setUserPresetLabel(name);
                 for (auto* b : self.bankButtons) b->setToggleState(false, juce::dontSendNotification);
                 for (auto* b : self.slotButtons) b->setToggleState(false, juce::dontSendNotification);
                 self.presetNameLabel.setText(name, juce::dontSendNotification);
@@ -825,6 +849,7 @@ void P64AudioProcessorEditor::showSaveDialog()
         confirm->setColour(juce::AlertWindow::backgroundColourId, juce::Colour(0xff10141b));
         confirm->setColour(juce::AlertWindow::textColourId, juce::Colour(0xffe2e8f0));
         confirm->setColour(juce::AlertWindow::outlineColourId, juce::Colour(0xfff59e0b));
+        safeThis->confirmWindow = confirm;
         confirm->enterModalState(true, juce::ModalCallbackFunction::create([doSave](int r) { if (r == 1) doSave(); }), true);
     }), true);
 }

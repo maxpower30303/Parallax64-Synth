@@ -102,6 +102,42 @@ namespace UserPresets
         return temp.overwriteTargetFileWithTemporary();
     }
 
+    // Replaces the whole parameter state. replaceState() leaves every parameter that is missing
+    // from the new state at its current value, so a preset or session saved before a parameter
+    // existed (e.g. the preset level) would inherit whatever the previous sound had. Parameters
+    // that are missing are set to their default instead.
+    inline void replaceStateWithDefaults(juce::AudioProcessorValueTreeState& apvts, const juce::ValueTree& newState)
+    {
+        // The tree only learns about parameter changes when it is flushed. If it is stale, a value
+        // in the new state that equals the stale one is no change to the tree, the parameter is
+        // not touched, and keeps the value it really has. copyState() flushes.
+        apvts.copyState();
+
+        for (auto* p : apvts.processor.getParameters())
+            if (auto* rp = dynamic_cast<juce::RangedAudioParameter*>(p))
+                if (! newState.getChildWithProperty("id", rp->paramID).isValid())
+                    rp->setValueNotifyingHost(rp->getDefaultValue());
+
+        apvts.replaceState(newState);
+
+        // replaceState() ignores a value that equals the one the tree last saw. A stepped parameter
+        // (on/off, choice) that a host set to an in-between value like 0.73 is stored snapped, so
+        // restoring the snapped value changes nothing and the parameter would keep 0.73. Set every
+        // value explicitly where the parameter does not already match.
+        for (const auto& child : newState)
+        {
+            if (! child.hasType("PARAM"))
+                continue;
+
+            if (auto* rp = apvts.getParameter(child.getProperty("id").toString()))
+            {
+                const float wanted = rp->convertTo0to1(static_cast<float>(child.getProperty("value")));
+                if (std::abs(rp->getValue() - wanted) > 1.0e-6f)
+                    rp->setValueNotifyingHost(wanted);
+            }
+        }
+    }
+
     inline bool load(const juce::String& name, juce::AudioProcessorValueTreeState& apvts)
     {
         auto xml = juce::XmlDocument::parse(getFileFor(name));
@@ -112,7 +148,7 @@ namespace UserPresets
         if (params == nullptr)
             return false;
 
-        apvts.replaceState(juce::ValueTree::fromXml(*params));
+        replaceStateWithDefaults(apvts, juce::ValueTree::fromXml(*params));
         return true;
     }
 }

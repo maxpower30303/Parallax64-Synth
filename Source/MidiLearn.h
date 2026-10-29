@@ -27,6 +27,7 @@ public:
 
     void startLearning(const juce::String& parameterId, bool isStepped = false)
     {
+        const juce::ScopedLock sl(lock);
         isLearning = true;
         learningParamId = parameterId;
         learningIsStepped = isStepped;
@@ -34,6 +35,7 @@ public:
 
     void stopLearning()
     {
+        const juce::ScopedLock sl(lock);
         isLearning = false;
         learningParamId = "";
         learningIsStepped = false;
@@ -41,6 +43,7 @@ public:
 
     void toggleArm(const juce::String& parameterId = "filter_cutoff", bool isStepped = false)
     {
+        const juce::ScopedLock sl(lock);
         if (isLearning)
             stopLearning();
         else
@@ -48,11 +51,12 @@ public:
     }
 
     bool getIsLearning() const { return isLearning; }
-    juce::String getLearningParamId() const { return learningParamId; }
-    bool isLearningParam(const juce::String& paramId) const { return isLearning && (learningParamId == paramId); }
+    juce::String getLearningParamId() const { const juce::ScopedLock sl(lock); return learningParamId; }
+    bool isLearningParam(const juce::String& paramId) const { const juce::ScopedLock sl(lock); return isLearning && (learningParamId == paramId); }
 
     int getCCForParam(const juce::String& parameterId) const
     {
+        const juce::ScopedLock sl(lock);
         for (const auto& pair : ccMap)
         {
             if (pair.second == parameterId)
@@ -63,6 +67,7 @@ public:
 
     void mapCC(int cc, const juce::String& parameterId, bool isStepped = false)
     {
+        const juce::ScopedLock sl(lock);
         ccMap[cc] = parameterId;
         if (isStepped)
             steppedParamIds.insert(parameterId);
@@ -72,6 +77,7 @@ public:
 
     void clearMappingForParam(const juce::String& parameterId)
     {
+        const juce::ScopedLock sl(lock);
         for (auto it = ccMap.begin(); it != ccMap.end(); )
         {
             if (it->second == parameterId)
@@ -84,6 +90,7 @@ public:
 
     void clearAllMappings()
     {
+        const juce::ScopedLock sl(lock);
         ccMap.clear();
         steppedParamIds.clear();
     }
@@ -93,6 +100,7 @@ public:
     // reverting to the hardcoded defaults from the constructor.
     std::unique_ptr<juce::XmlElement> createXml() const
     {
+        const juce::ScopedLock sl(lock);
         auto xml = std::make_unique<juce::XmlElement>("MIDI_LEARN");
         for (const auto& pair : ccMap)
         {
@@ -109,6 +117,7 @@ public:
         if (xml == nullptr || !xml->hasTagName("MIDI_LEARN"))
             return;
 
+        const juce::ScopedLock sl(lock);
         ccMap.clear();
         steppedParamIds.clear();
 
@@ -188,8 +197,18 @@ public:
         }
     }
 
+    // Audio thread. The maps are shared with the UI thread, so the lock is only tried: if the
+    // UI holds it right now (a mapping is being edited) this block's controller messages are
+    // skipped instead of waiting.
     void handleIncomingMidi(const juce::MidiBuffer& midiMessages)
     {
+        if (midiMessages.isEmpty())
+            return;
+
+        const juce::ScopedTryLock sl(lock);
+        if (! sl.isLocked())
+            return;
+
         for (const auto metadata : midiMessages)
         {
             auto msg = metadata.getMessage();
@@ -255,6 +274,7 @@ public:
 
 private:
     juce::AudioProcessorValueTreeState& apvts;
+    mutable juce::CriticalSection lock;
     std::map<int, juce::String> ccMap;
     std::set<juce::String> steppedParamIds;
     bool isLearning = false;

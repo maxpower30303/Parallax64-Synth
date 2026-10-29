@@ -21,6 +21,8 @@ public:
     void reset()
     {
         heldNotes.clear();
+        heldNotes.reserve(128);
+        notePool.reserve(128 * 3);
         currentStep = 0;
         sampleCounter = 0;
         lastArpNote = -1;
@@ -46,7 +48,7 @@ public:
         }
 
         // Collect new NoteOns and NoteOffs
-        juce::MidiBuffer incomingNotes;
+        incomingNotes.clear();
         for (const auto metadata : midiMessages)
         {
             auto msg = metadata.getMessage();
@@ -89,7 +91,7 @@ public:
         }
 
         // Build note pool based on octaves (1, 2, or 3)
-        std::vector<int> notePool;
+        notePool.clear();
         int clampedOctaves = juce::jlimit(1, 3, octaves);
         for (int oct = 0; oct < clampedOctaves; ++oct)
         {
@@ -175,6 +177,9 @@ public:
 private:
     double currentSampleRate = 44100.0;
     std::vector<int> heldNotes;
+    // scratch containers kept as members so processing never allocates in steady state
+    juce::MidiBuffer incomingNotes;
+    std::vector<int> notePool;
     int currentStep = 0;
     int sampleCounter = 0;
     int lastArpNote = -1;
