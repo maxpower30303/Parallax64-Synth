@@ -15,6 +15,15 @@ A polyphonic subtractive synthesizer for Windows, built with [JUCE](https://juce
 - User presets: SAVE stores the current sound under a suggested name (UserPreset1, UserPreset2, ...) and asks before overwriting; click the preset name at the top right to load them
 - MIDI learn for knobs, faders and selectors; learned mappings are saved with the session/preset state
 
+## Download
+
+Windows builds (VST3 and standalone) are on the [Releases page](https://github.com/maxpower30303/Parallax64-Synth/releases/latest).
+
+- **Standalone:** unzip and run `P64 Synthesizer.exe`.
+- **VST3:** copy the folder `P64 Synthesizer.vst3` to `C:\Program Files\Common Files\VST3` and rescan plug-ins in your DAW.
+
+The executable is unsigned, so Windows SmartScreen may show a warning. The SHA256 checksum of each zip is listed in the release notes.
+
 ## Build (Windows)
 
 Requirements: Visual Studio (C++20 toolchain) and CMake 3.22 or newer. JUCE 9.0.2 is downloaded automatically.
